@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+chromadb
+google-generativeai
+beautifulsoup4
+selenium
+webdriver-manager
+python-dotenv
+requests
