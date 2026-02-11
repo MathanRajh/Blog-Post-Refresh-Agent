@@ -209,13 +209,28 @@ CRITICAL RULES:
 2. **SEMANTIC MERGING**: If merging, combine the text of the sections smoothly.
 3. **MAX 6 SECTIONS**: The final output MUST NOT have more than 6 `<h2>` headings. If you have more, merge them.
 4. **FORMATTING**: Return properly formatted HTML body content (h2, p, ul).
-5. **NO MARKDOWN**: Return raw HTML only.
+5. **NO MARKDOWN**: Return raw HTML only. DO NOT wrap in ```html``` code blocks.
+6. **NO METADATA**: Do NOT include `<html>`, `<head>`, `<title>`, `<meta>`, or `<body>` tags. Return ONLY the inner content of the body.
+7. **NO CONVERSATIONAL FILLER**: Do NOT say "Here is the HTML", "I have merged...", etc. Just return the code.
 
-RETURN HTML <body> CONTENT ONLY.
+RETURN PURE HTML CONTENT ONLY.
 """
 
     res = generate_with_retry(model, prompt)
     html_output = res.text.replace("```html", "").replace("```", "").strip()
+    
+    # POST-PROCESS: Remove common conversational prefixes/suffixes if LLM ignores rules
+    html_output = re.sub(r'^Here is the.*?<', '<', html_output, flags=re.DOTALL | re.IGNORECASE)
+    html_output = re.sub(r'Since you requested.*?<', '<', html_output, flags=re.DOTALL | re.IGNORECASE)
+    
+    # POST-PROCESS: Remove <head> logic if it sneaks in
+    html_output = re.sub(r'<head>.*?</head>', '', html_output, flags=re.DOTALL | re.IGNORECASE)
+    html_output = re.sub(r'<!DOCTYPE.*?>', '', html_output, flags=re.DOTALL | re.IGNORECASE)
+    html_output = re.sub(r'<html>', '', html_output, flags=re.IGNORECASE)
+    html_output = re.sub(r'</html>', '', html_output, flags=re.IGNORECASE)
+    html_output = re.sub(r'<body>', '', html_output, flags=re.IGNORECASE)
+    html_output = re.sub(r'</body>', '', html_output, flags=re.IGNORECASE)
+    html_output = html_output.strip()
     
     # POST-PROCESS: Fix unicode escapes (e.g., \u2019 -> ’)
     try:

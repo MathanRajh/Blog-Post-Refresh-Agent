@@ -69,7 +69,7 @@ def parse_html(html_content: str, source_url: str) -> List[Dict[str, Any]]:
     if title_text:
         sections.append({
             "heading": "Title & Metadata",
-            "content": f"<h1>{title_text}</h1>\n<p><em>{meta_text.strip(' | ')}</em></p>",
+            "content": f"<h1>{title_text}</h1>", # FIXED: Remove meta_text per user request
             "level": "header",
             "links": []
         })
@@ -87,8 +87,8 @@ def parse_html(html_content: str, source_url: str) -> List[Dict[str, Any]]:
     if main_content:
         # === FOOTER CHOPPER ===
         # Remove paragraphs that look like footer links (Terms, Privacy, Copyright)
-        footer_keywords = ["copyright", "rights reserved", "terms of use", "privacy policy", "contact us", "about us", "newsletter", "subscribe"]
-        for p in main_content.find_all(['p', 'div', 'span']):
+        footer_keywords = ["copyright", "rights reserved", "terms of use", "privacy policy", "contact us", "about us", "newsletter", "subscribe", "more from"]
+        for p in main_content.find_all(['p', 'div', 'span', 'h3', 'h4', 'h5', 'h6']):
             txt = p.get_text(strip=True).lower()
             if len(txt) < 150 and any(k in txt for k in footer_keywords):
                 p.decompose()
@@ -164,7 +164,7 @@ def parse_html(html_content: str, source_url: str) -> List[Dict[str, Any]]:
                         sections.append(current_section)
                     current_section = {
                         "heading": element.get_text(strip=True), 
-                        "content": f"<{element.name}>{element.get_text(strip=True)}</{element.name}>", 
+                        "content": "",  # FIXED: Do not include the heading tag in the content body
                         "level": element.name,
                         "links": []
                     }
