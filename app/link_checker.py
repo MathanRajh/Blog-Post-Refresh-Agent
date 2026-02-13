@@ -11,26 +11,55 @@ def check_single_link(link_obj):
     
     result = {
         "url": url,
-        "section_id": link_obj.get("section_id"), # Pass through ID
+        "section_id": link_obj.get("section_id"),
+        "text": link_obj.get("text", "Link"),  # Preserve original anchor text
         "status": "pending",
         "target_title": None,
         "reason": None
     }
 
     try:
+        # 0. Internal Anchors (Skip Network Check)
+        if url.startswith('#'):
+            result['status'] = 'valid'
+            result['target_title'] = "Internal Anchor"
+            return result
+        
+        # 0b. Strip fragment from URL for HTTP validation
+        # Servers never see the fragment (#section) — it's client-side only
+        from urllib.parse import urlparse, urlunparse
+        parsed = urlparse(url)
+        if parsed.fragment:
+            # Validate the URL WITHOUT the fragment
+            url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, parsed.query, ''))
+            result['target_title'] = f"Fragment: #{parsed.fragment}"
+
         # 1. Try HEAD Request first (Fast)
         try:
             resp = requests.head(url, headers=headers, timeout=15, allow_redirects=True)
             
-            # If Method Not Allowed (405) or Forbidden (403), try GET
-            if resp.status_code in [405, 403]:
+            # If Method Not Allowed (405) or Not Acceptable (406), try GET
+            if resp.status_code in (405, 406):
                 resp = requests.get(url, headers=headers, timeout=15, stream=True)
-                resp.close() # Close immediately, just checking status
+                resp.close()
             
+            # Special Handling for 403 (Forbidden) - Likely Anti-Bot.
+            # We assume the link is VALID/ALIVE if we get a 403, rather than failing it.
+            if resp.status_code == 403:
+                result['status'] = 'alive'
+                result['target_title'] = "Protected Content (403)"
+                return result
+                
         except requests.exceptions.RequestException:
             # Fallback to GET if HEAD failed completely
             resp = requests.get(url, headers=headers, timeout=15, stream=True)
             resp.close()
+            
+            # Check 403 again after GET fallback
+            if resp.status_code == 403:
+                result['status'] = 'alive'
+                result['target_title'] = "Protected Content (403)"
+                return result
 
         if resp.status_code >= 400:
             result['status'] = 'invalid'

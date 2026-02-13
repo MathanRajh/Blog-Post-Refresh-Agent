@@ -8,6 +8,8 @@ class Site(Base):
     id = Column(Integer, primary_key=True, index=True)
     url = Column(String, unique=True, index=True)
     domain = Column(String)
+    page_title = Column(String, nullable=True)
+    had_toc = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationship: One Site -> Many Sections
@@ -21,6 +23,7 @@ class Section(Base):
     heading = Column(String)      # For Structure Audit
     content = Column(Text)        # For Semantic Context
     level = Column(String)        # "h2" or "h3"
+    html_id = Column(String, nullable=True) # captured ID for anchors
     order_index = Column(Integer) # Critical for reconstruction
     is_merged = Column(Boolean, default=False)
     
